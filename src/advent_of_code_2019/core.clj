@@ -36,4 +36,4 @@
        (map fuel-consumption2)
        (reduce +)))
 
-(day1-b (read-input "resources/input1.txt"))
+(day1 (read-input "resources/input1.txt"))
