@@ -1,4 +1,5 @@
 (ns advent-of-code-2019.core
+  (:require [clojure.core.match :refer [match]])
   (:gen-class))
 
 ;; first puzzle
@@ -75,6 +76,7 @@
 
 (first (day2-a (read-input2 "resources/input2.txt")))
 
+;; fourth puzzle
 (defn day2-b [input]
   (loop [noun 0
          verb 0]
@@ -84,3 +86,63 @@
              (if (= verb 99) 0 (inc verb))))))
 
 (day2-b (read-input2 "resources/input2.txt"))
+
+;; fifth puzzle
+(defn read-instruction [s]
+  [(nth s 0) (parse-int (subs s 1))])
+
+(defn read-input3 [file]
+  (as-> file v
+    (slurp v)
+    (clojure.string/split v #"\n")
+    (map #(clojure.string/split % #",") v)
+    (map #(map read-instruction %) v)))
+
+(defn build-lines
+  ([instructions] (build-lines instructions [0 0] '()))
+  ([instructions cur res]
+   (if (empty? instructions) (reverse res)
+       (let [line (match (first instructions)
+                         [\R n] [cur [(+ (first cur) n) (second cur)]] 
+                         [\L n] [cur [(- (first cur) n) (second cur)]]  
+                         [\U n] [cur [(first cur) (+ (second cur) n)]]  
+                         [\D n] [cur [(first cur) (- (second cur) n)]] 
+                         :else (throw (Exception. "Should not happen!!!")))]
+         (build-lines (rest instructions)
+                      (second line)
+                      (cons line res))))))
+
+(defn between [x1 x2 x3]
+  (and (<= (min x1 x3) x2)
+       (<= x2 (max x1 x3))))
+
+(defn lines-intersect [line1 line2]
+  (match [line1 line2]
+         [[[x1 y1] [x2 y2]] [[x3 y3] [x4 y4]]]
+         (cond
+           (or (and (= x1 x2) (= x3 x4))
+               (and (= y1 y2) (= y3 y4)))
+           nil
+           (and (= x1 x2) (= y3 y4) (between x3 x1 x4) (between y1 y3 y2))
+           [x1 y3]
+           (and (= y1 y2) (= x3 x4) (between x1 x3 x2) (between y3 y1 y4))
+           [x3 y1]
+           :else nil)))
+
+(defn calc-intersections [lines1 lines2]
+  (->>
+   (for [line1 lines1
+         line2 lines2]
+     (lines-intersect line1 line2))
+   (filter #(not (nil? %)))))
+
+(defn day3-a [input]
+  (as-> input v
+    (map build-lines v)
+    (calc-intersections (first v) (second v))
+    (sort (fn [[x1 y1] [x2 y2]]
+            (compare (+ (Math/abs x1) (Math/abs y1))
+                     (+ (Math/abs x2) (Math/abs y2)))) v)))
+
+;; (day3-a (read-input3 "resources/test3.txt"))
+(day3-a (read-input3 "resources/input3.txt"))
