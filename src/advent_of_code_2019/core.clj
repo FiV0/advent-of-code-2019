@@ -146,3 +146,80 @@
 
 ;; (day3-a (read-input3 "resources/test3.txt"))
 (day3-a (read-input3 "resources/input3.txt"))
+
+;; six puzzle
+(defn build-lines2
+  ([instructions] (build-lines2 instructions [0 0] 0 '()))
+  ([instructions cur total res]
+   (if (empty? instructions) (reverse res)
+       (let [line (match (first instructions)
+                         [\R n] [cur [(+ (first cur) n) (second cur)] total]  
+                         [\L n] [cur [(- (first cur) n) (second cur)] total] 
+                         [\U n] [cur [(first cur) (+ (second cur) n)] total] 
+                         [\D n] [cur [(first cur) (- (second cur) n)] total]
+                         :else (throw (Exception. "Should not happen!!!")))]
+         (build-lines2 (rest instructions)
+                      (second line)
+                      (+ (second (first instructions)) total)
+                      (cons line res))))))
+
+(defn lines-intersect2 [line1 line2]
+  (match [line1 line2]
+         [[[x1 y1] [x2 y2] dis1] [[x3 y3] [x4 y4] dis2]]
+         (cond
+           (or (and (= x1 x2) (= x3 x4))
+               (and (= y1 y2) (= y3 y4)))
+           nil
+           (and (= x1 x2) (= y3 y4) (between x3 x1 x4) (between y1 y3 y2))
+           (+ dis1 dis2 (Math/abs (- y1 y3)) (Math/abs (- x1 x3)))
+           (and (= y1 y2) (= x3 x4) (between x1 x3 x2) (between y3 y1 y4))
+           (+ dis1 dis2 (Math/abs (- x1 x3)) (Math/abs (- y1 y3)))
+           :else nil)))
+
+(defn calc-intersections2 [lines1 lines2]
+  (->>
+   (for [line1 lines1
+         line2 lines2]
+     (lines-intersect2 line1 line2))
+   (filter #(not (nil? %)))))
+
+(defn day3-b [input]
+  (as-> input v
+    (map build-lines2 v)
+    (calc-intersections2 (first v) (second v))
+    (sort v)))
+
+(day3-b (read-input3 "resources/input3.txt"))
+
+;; puzzle seven
+(def input4 [248345 746315])
+
+(defn digits [n]
+  (->> n str (map (comp read-string str))))
+
+(defn two-the-same [n]
+  (->> n digits frequencies vals (filter #(> % 1)) empty? not))
+
+(defn two-the-same-b [n]
+  (->> n digits frequencies vals (filter #(= % 2)) empty? not))
+
+(defn increasing [n]
+  (->> n digits (partition 2 1) (map #(apply <= %)) (every? true?)))
+
+(defn day4-a [a b]
+  (->> (range a (inc b))
+       (filter two-the-same)
+       (filter increasing)
+       count))
+
+(day4-a (first input4) (second input4))
+
+;; eigth puzzle
+(defn day4-b [a b]
+  (->> (range a (inc b))
+       (filter two-the-same-b)
+       (filter increasing)
+       count))
+
+(day4-b (first input4) (second input4))
+
