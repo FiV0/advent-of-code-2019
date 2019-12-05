@@ -222,4 +222,101 @@
        count))
 
 (day4-b (first input4) (second input4))
+                                        ;
+;; ninth puzzle
+(defn int-to-array [i]
+  [(int (/ i 10000))
+   (mod (int (/ i 1000)) 10)
+   (mod (int (/ i 100)) 10)
+   (mod i 100)])
 
+(defn get-program-value [input mode i]
+  (if (= mode 0)
+    (get input (get input i)) 
+    (get input i) ))
+
+(defn run-program2
+  ([input] (run-program2 input 0))
+  ([input i]
+   (match (int-to-array (get input i))
+          [_ m2 m1 1] (-> (assoc input (get input (+ i 3))
+                                 (+ (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))) )
+                           (run-program2 (+ i 4)))
+          [_ m2 m1 2] (-> (assoc input (get input (+ i 3))
+                                 (* (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))))
+                          (run-program2 (+ i 4)))
+          [_ _ _ 3] (do (println "Enter a number:")
+                        (let [in (parse-int (read-line))]
+                          (-> (assoc input (get input (inc i)) in)
+                              (run-program2 (+ i 2)))))
+          [_ _ m1 4] (do (println "Output:" (get-program-value input m1 (inc i)))
+                         (run-program2 input (+ i 2)))
+          [_ _ _ 99] input
+          :else (prn (get input i)))))
+
+(defn day5-a [input]
+  (->> input
+       read-input2
+       vec
+       run-program2
+       ))
+
+(day5-a "resources/input5.txt")
+
+;; puzzle ten
+
+(defn run-program3
+  ([input] (run-program3 input 0))
+  ([input i]
+   ;; (prn input)
+   ;; (prn (int-to-array (get input i)))
+   (match (int-to-array (get input i))
+          [_ m2 m1 1] (-> (assoc input (get input (+ i 3))
+                                 (+ (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))) )
+                           (run-program3 (+ i 4)))
+          [_ m2 m1 2] (-> (assoc input (get input (+ i 3))
+                                 (* (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))))
+                          (run-program3 (+ i 4)))
+          [_ _ _ 3] (do (println "Enter a number:")
+                        (let [in (parse-int (read-line))]
+                          (-> (assoc input (get input (inc i)) in)
+                              (run-program3 (+ i 2)))))
+          [_ _ m1 4] (do (println "Output:" (get-program-value input m1 (inc i)))
+                         (run-program3 input (+ i 2)))
+          [_ m2 m1 5] (if (= (get-program-value input m1 (inc i)) 0)
+                        (run-program3 input (+ i 3))
+                        (run-program3 input (get-program-value input m2 (+ i 2))))
+          [_ m2 m1 6] (if (= (get-program-value input m1 (inc i)) 0)
+                        (run-program3 input (get-program-value input m2 (+ i 2)))
+                        (run-program3 input (+ i 3)))
+          [_ m2 m1 7] (->
+                       (assoc input (get input (+ i 3))
+                              (if (< (get-program-value input m1 (inc i))
+                                     (get-program-value input m2 (+ i 2))) 1 0))
+                       (run-program3 (+ i 4)))
+          [_ m2 m1 8] (->
+                       (assoc input (get input (+ i 3))
+                              (if (= (get-program-value input m1 (inc i))
+                                     (get-program-value input m2 (+ i 2))) 1 0))
+                       (run-program3 (+ i 4)))
+          [_ _ _ 99] input
+          :else (throw (Exception. "Should not happen!!!"))
+          )))
+
+(defn day5-b [input]
+  (->> input
+       read-input2
+       vec
+       run-program3
+       ))
+
+;; (def jump-test1 [3 12 6 12 15 1 13 14 13 4 13 99 -1 0 1 9])
+;; (def jump-test2 [3 3 1105 -1 9 1101 0 0 12 4 12 99 1])
+;; (def compare-test1 [3 9 8 9 10 9 4 9 99 -1 8])
+;; (run-program3 compare-test1)
+;; (day5-b "resources/test5.txt")
+(day5-b "resources/input5.txt")
