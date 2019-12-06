@@ -263,15 +263,13 @@
        run-program2
        ))
 
-(day5-a "resources/input5.txt")
+;; (day5-a "resources/input5.txt")
 
 ;; puzzle ten
 
 (defn run-program3
   ([input] (run-program3 input 0))
   ([input i]
-   ;; (prn input)
-   ;; (prn (int-to-array (get input i)))
    (match (int-to-array (get input i))
           [_ m2 m1 1] (-> (assoc input (get input (+ i 3))
                                  (+ (get-program-value input m1 (inc i))
@@ -319,4 +317,54 @@
 ;; (def compare-test1 [3 9 8 9 10 9 4 9 99 -1 8])
 ;; (run-program3 compare-test1)
 ;; (day5-b "resources/test5.txt")
-(day5-b "resources/input5.txt")
+;; (day5-b "resources/input5.txt")
+
+;;puzzle 11
+
+(defn read-input3 [file]
+  (as-> file v
+    (slurp v)
+    (clojure.string/split v #"\n")
+    (map #(clojure.string/split % #"\)") v)))
+
+(defn dfs [s m]
+  (let [children (map #(dfs % m) (get m s))
+        children-count (->> (map first children) (reduce +'))
+        children-res (->> (map second children) (reduce +'))]
+    [(inc children-count) (+' children-res children-count)]))
+
+;; (dfs 1 {1 [2 3] 2 [4 5] 3 [6]} )
+
+(defn day5-a [input]
+  (->> input
+       read-input3
+       (reduce (fn [m [a b]]
+                 (update m a #(if (nil? %) [b] (conj % b)))) {})
+       (dfs "COM")
+       ))
+
+;; (day5-a "resources/input6.txt")
+;; (day5-a "resources/test6.txt")
+
+;;puzzle 12
+(defn dfs2
+  ([cur end m] (dfs2 cur end m nil)) 
+  ([cur end m parent]
+   (if (= cur end) 0
+       (let [res (->> (remove #(= parent %) (get m cur))
+                      (map #(dfs2 % end m cur))
+                      (filter #(<= 0 %))
+                      first)]
+         (if (nil? res) -1
+             (inc res))))))
+
+(defn day5-b [input]
+  (->> input
+       read-input3
+       (reduce (fn [m [a b]]
+                 (-> (update m a #(if (nil? %) [b] (conj % b)))
+                     (update b #(if (nil? %) [a] (conj % a))))) {})
+       (dfs2 "YOU" "SAN")))
+
+;; (day5-b "resources/test6.txt")
+;; (day5-b "resources/input6.txt")
