@@ -1,5 +1,6 @@
 (ns advent-of-code-2019.core
-  (:require [clojure.core.match :refer [match]])
+  (:require [clojure.core.match :refer [match]]
+            [clojure.math.combinatorics :as combo])
   (:gen-class))
 
 ;; first puzzle
@@ -20,7 +21,7 @@
        (map fuel-consumption)
        (reduce +)))
 
-(day1-a (read-input "resources/input1.txt"))
+;; (day1-a (read-input "resources/input1.txt"))
 
 ;; second puzzle
 (defn fuel-consumption2 [i]
@@ -37,7 +38,7 @@
        (map fuel-consumption2)
        (reduce +)))
 
-(day1-b (read-input "resources/input1.txt"))
+;; (day1-b (read-input "resources/input1.txt"))
 
 ;; third puzzle
 (defn read-input2 [file]
@@ -74,7 +75,7 @@
         (assoc 2 b)
         run-program)))
 
-(first (day2-a (read-input2 "resources/input2.txt")))
+;; (first (day2-a (read-input2 "resources/input2.txt")))
 
 ;; fourth puzzle
 (defn day2-b [input]
@@ -85,7 +86,7 @@
       (recur (if (= verb 99) (inc noun) noun)
              (if (= verb 99) 0 (inc verb))))))
 
-(day2-b (read-input2 "resources/input2.txt"))
+;; (day2-b (read-input2 "resources/input2.txt"))
 
 ;; fifth puzzle
 (defn read-instruction [s]
@@ -145,7 +146,7 @@
                      (+ (Math/abs x2) (Math/abs y2)))) v)))
 
 ;; (day3-a (read-input3 "resources/test3.txt"))
-(day3-a (read-input3 "resources/input3.txt"))
+;; (day3-a (read-input3 "resources/input3.txt"))
 
 ;; six puzzle
 (defn build-lines2
@@ -189,7 +190,7 @@
     (calc-intersections2 (first v) (second v))
     (sort v)))
 
-(day3-b (read-input3 "resources/input3.txt"))
+;; (day3-b (read-input3 "resources/input3.txt"))
 
 ;; puzzle seven
 (def input4 [248345 746315])
@@ -212,7 +213,7 @@
        (filter increasing)
        count))
 
-(day4-a (first input4) (second input4))
+;; (day4-a (first input4) (second input4))
 
 ;; eigth puzzle
 (defn day4-b [a b]
@@ -221,7 +222,7 @@
        (filter increasing)
        count))
 
-(day4-b (first input4) (second input4))
+;; (day4-b (first input4) (second input4))
                                         ;
 ;; ninth puzzle
 (defn int-to-array [i]
@@ -343,8 +344,8 @@
        (dfs "COM")
        ))
 
-;; (day5-a "resources/input6.txt")
-;; (day5-a "resources/test6.txt")
+;; (day6-a "resources/input6.txt")
+;; (day6-a "resources/test6.txt")
 
 ;;puzzle 12
 (defn dfs2
@@ -366,5 +367,133 @@
                      (update b #(if (nil? %) [a] (conj % a))))) {})
        (dfs2 "YOU" "SAN")))
 
-;; (day5-b "resources/test6.txt")
-;; (day5-b "resources/input6.txt")
+;; (day6-b "resources/test6.txt")
+;; (day6-b "resources/input6.txt")
+
+;; puzzle 13
+
+(defn phase-combinantions []
+  (->> (range 5)
+       (combo/permutations)))
+
+(defn run-program4
+  [input i queue]
+   (match (int-to-array (get input i))
+          [_ m2 m1 1] (-> (assoc input (get input (+ i 3))
+                                 (+ (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))) )
+                          (run-program4 (+ i 4) queue))
+          [_ m2 m1 2] (-> (assoc input (get input (+ i 3))
+                                 (* (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))))
+                          (run-program4 (+ i 4) queue))
+          [_ _ _ 3] (-> (assoc input (get input (inc i)) (first queue))
+                        (run-program4 (+ i 2) (rest queue)))
+          [_ _ m1 4] (get-program-value input m1 (inc i))
+          [_ m2 m1 5] (if (= (get-program-value input m1 (inc i)) 0)
+                        (run-program4 input (+ i 3) queue)
+                        (run-program4 input (get-program-value input m2 (+ i 2)) queue))
+          [_ m2 m1 6] (if (= (get-program-value input m1 (inc i)) 0)
+                        (run-program4 input (get-program-value input m2 (+ i 2)) queue)
+                        (run-program4 input (+ i 3) queue))
+          [_ m2 m1 7] (->
+                       (assoc input (get input (+ i 3))
+                              (if (< (get-program-value input m1 (inc i))
+                                     (get-program-value input m2 (+ i 2))) 1 0))
+                       (run-program4 (+ i 4) queue))
+          [_ m2 m1 8] (->
+                       (assoc input (get input (+ i 3))
+                              (if (= (get-program-value input m1 (inc i))
+                                     (get-program-value input m2 (+ i 2))) 1 0))
+                       (run-program4 (+ i 4) queue))
+          [_ _ _ 99] nil 
+          ;; input
+          :else (throw (Exception. "Should not happen!!!"))))
+
+(defn add-to-phase-combination [phase item]
+  (if (empty? phase)
+    (list item)
+    (cons (first phase) (cons item (rest phase))) ))
+
+(defn run-amplifiers [input phase]
+  (loop [p (add-to-phase-combination phase 0)]
+    (println p)
+    (if (= (count p) 1)
+      (first p)
+      (recur (->> (run-program4 input 0 p)
+                  (add-to-phase-combination (-> p rest rest)))))))
+
+(defn day7-a [input]
+  (let [in (-> input read-input2 vec)
+        phases (phase-combinantions)]
+    (->> (map #(run-amplifiers in %) phases)
+         (reduce max 0))))
+
+;; (run-amplifiers (-> "resources/test7.txt" read-input2 vec) '(4 3 2 1 0))
+;; (run-amplifiers (-> "resources/test7b.txt" read-input2 vec) '(0 1 2 3 4))
+;; (run-amplifiers (-> "resources/test7c.txt" read-input2 vec) '(1 0 4 3 2))
+
+;; (day7-a "resources/input7.txt")
+
+;; puzzle 14
+(defn phase-combinantions2 []
+  (->> (range 5 10)
+       (combo/permutations)))
+
+(defn run-program5
+  [input i queue]
+   (match (int-to-array (get input i))
+          [_ m2 m1 1] (-> (assoc input (get input (+ i 3))
+                                 (+ (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))) )
+                          (run-program5 (+ i 4) queue))
+          [_ m2 m1 2] (-> (assoc input (get input (+ i 3))
+                                 (* (get-program-value input m1 (inc i))
+                                    (get-program-value input m2 (+ i 2))))
+                          (run-program5 (+ i 4) queue))
+          [_ _ _ 3] (-> (assoc input (get input (inc i)) (first queue))
+                        (run-program5 (+ i 2) (rest queue)))
+          [_ _ m1 4] [input (+ i 2) (get-program-value input m1 (inc i))]
+          [_ m2 m1 5] (if (= (get-program-value input m1 (inc i)) 0)
+                        (run-program5 input (+ i 3) queue)
+                        (run-program5 input (get-program-value input m2 (+ i 2)) queue))
+          [_ m2 m1 6] (if (= (get-program-value input m1 (inc i)) 0)
+                        (run-program5 input (get-program-value input m2 (+ i 2)) queue)
+                        (run-program5 input (+ i 3) queue))
+          [_ m2 m1 7] (->
+                       (assoc input (get input (+ i 3))
+                              (if (< (get-program-value input m1 (inc i))
+                                     (get-program-value input m2 (+ i 2))) 1 0))
+                       (run-program5 (+ i 4) queue))
+          [_ m2 m1 8] (->
+                       (assoc input (get input (+ i 3))
+                              (if (= (get-program-value input m1 (inc i))
+                                     (get-program-value input m2 (+ i 2))) 1 0))
+                       (run-program5 (+ i 4) queue))
+          [_ _ _ 99] nil 
+          ;; input
+          :else (throw (Exception. "Should not happen!!!"))))
+
+(defn run-amplifiers2
+  ([inputs phase] (run-amplifiers2 inputs phase 0))
+  ([inputs phase init]
+   (loop [ins inputs
+          cur init 
+          i 0]
+     (let [ii (mod i 5)
+           [input cnt] (nth ins ii)
+           res (run-program5 input cnt (if (< i 5) [(nth phase i) cur] [cur]))]
+       (if (nil? res)
+         cur
+         (recur (assoc ins ii [(first res) (second res)])
+                (nth res 2)
+                (inc i)))))))
+
+(defn day7-b [input]
+  (let [in (-> input read-input2 vec)
+        inputs (vec (repeat 5 [in 0]) )
+        phases (phase-combinantions2)]
+    (->> (map #(run-amplifiers2 inputs %) phases)
+         (reduce max 0))))
+
+;; (day7-b "resources/input7.txt")
