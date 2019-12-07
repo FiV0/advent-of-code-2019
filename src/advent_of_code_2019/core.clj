@@ -335,7 +335,7 @@
 
 ;; (dfs 1 {1 [2 3] 2 [4 5] 3 [6]} )
 
-(defn day5-a [input]
+(defn day6-a [input]
   (->> input
        read-input3
        (reduce (fn [m [a b]]
@@ -358,7 +358,7 @@
          (if (nil? res) -1
              (inc res))))))
 
-(defn day5-b [input]
+(defn day6-b [input]
   (->> input
        read-input3
        (reduce (fn [m [a b]]
