@@ -497,3 +497,53 @@
          (reduce max 0))))
 
 ;; (day7-b "resources/input7.txt")
+
+;; puzzle 15
+(defn read-input7 [file]
+  (->> file
+    slurp 
+    seq
+    (filter #(not (= % \newline)))
+    (map #(parse-int (str %)))))
+
+(def width 25)
+(def height 6)
+(def size (* width height))
+
+(defn day8-a [input]
+  (let [partitions (->> input (partition size))
+        index (->> partitions
+                   (map-indexed (fn [i p] [i (reduce #(if (= %2 0) (inc %1) %1) 0 p)]))
+                   (reduce (fn [[i1 cur1] [i2 cur2]] (if (< cur2 cur1) [i2 cur2] [i1 cur1]))[-1 (inc size)])
+                   first)]
+    (as-> (nth partitions index) v
+        (reduce (fn [[cnt1 cnt2] val]
+                  (case val
+                    1 [(inc cnt1) cnt2]
+                    2 [cnt1 (inc cnt2)]
+                    [cnt1 cnt2])) [0 0] v)
+        (* (first v) (second v)))))
+
+;; (day8-a (read-input7 "resources/input8.txt"))
+;; puzzle 16
+
+(defn transpose [mat]
+  (apply map list mat))
+
+(defn print-picture [input]
+  (loop [in input
+         i 1]
+    (if (empty? in)
+      nil
+      (do (if (= 1 (first in)) (print "1") (print " "))
+          (when (= 0 (mod i width)) (println))
+          (recur (rest in) (inc i))))))
+
+(defn day8-b [input]
+  (->> input
+       (partition size)
+       transpose
+       (map #(first (filter (fn [x] (not= x 2)) %)))
+       print-picture))
+
+;; (day8-b (read-input7 "resources/input8.txt"))
