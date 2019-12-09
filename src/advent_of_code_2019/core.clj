@@ -5,7 +5,7 @@
 
 ;; first puzzle
 (defn parse-int [s]
-  (Integer/parseInt s))
+  (java.math.BigInteger. s))
 
 (defn fuel-consumption [i]
   (-> i (/ 3) int (- 2)))
@@ -547,3 +547,80 @@
        print-picture))
 
 ;; (day8-b (read-input7 "resources/input8.txt"))
+
+;; puzzle 17 + 18
+(defn expand-vector [v l]
+  (if (< l (count v))
+    v
+    (vec (concat v (repeat (inc (- l (count v))) 0)))))
+
+(defn get-extend [v i]
+  (-> (expand-vector v i)
+      (get i)))
+
+(defn get-program-value2 [input mode i rel]
+  (case mode
+    0 (get-extend input (get-extend input i)) 
+    1 (get-extend input i)
+    2 (get-extend input (+ rel (get-extend input i)))))
+
+(defn assoc-expand [input pos value mode rel]
+  (let [input (expand-vector input pos)]
+    (case mode
+      0 (assoc input pos value) 
+      2 (let [input (expand-vector input (+ rel pos))]
+          (assoc input (+ rel pos) value))
+      (throw (Exception. "Should not happen!!!")))))
+
+(defn run-program6
+  [input] 
+  (loop [input input i 0 r 0]
+    (match (int-to-array (get input i))
+           [m3 m2 m1 1] (recur (assoc-expand input (get input (+ i 3))
+                                          (+' (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r))
+                                          m3 r)
+                               (+ i 4) r)
+           [m3 m2 m1 2] (recur (assoc-expand input (get input (+ i 3))
+                                          (*' (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r))
+                                          m3 r)
+                               (+ i 4) r)
+           [_ _ m1 3] (do (println "Enter a number:")
+                          (let [in (parse-int (read-line))]
+                            (recur (assoc-expand input (get input (inc i)) in
+                                                 m1 r)
+                                   (+ i 2) r)))
+           [_ _ m1 4] (do (println "Output:" (get-program-value2 input m1 (inc i) r))
+                          (recur input (+ i 2) r))
+           [_ m2 m1 5] (if (= (get-program-value2 input m1 (inc i) r) 0)
+                         (recur input (+ i 3) r)
+                         (recur input (get-program-value2 input m2 (+ i 2) r) r))
+           [_ m2 m1 6] (if (= (get-program-value2 input m1 (inc i) r) 0)
+                         (recur input (get-program-value2 input m2 (+ i 2) r) r)
+                         (recur input (+ i 3) r))
+           [m3 m2 m1 7] (->
+                         (assoc-expand input (get input (+ i 3))
+                                       (if (< (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r)) 1 0)
+                                       m3 r)
+                         (recur (+ i 4) r))
+           [m3 m2 m1 8] (recur (assoc-expand input (get input (+ i 3))
+                                       (if (= (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r)) 1 0)
+                                       m3 r)
+                               (+ i 4) r)
+           [_ _ m1 9]  (recur input (+ i 2) (+ r (get-program-value2 input m1 (inc i) r)))
+           [_ _ _ 99] input
+           :else (throw (Exception. "Should not happen!!!")))))
+
+(defn day9-a [input]
+  (->> input
+       read-input2
+       vec
+       run-program6))
+
+;; (day9-a "resources/test9a.txt")
+;; (day9-a "resources/test9b.txt")
+;; (day9-a "resources/test9c.txt")
+;; (day9-a "resources/input9.txt")
