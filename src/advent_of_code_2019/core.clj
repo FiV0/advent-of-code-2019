@@ -623,4 +623,116 @@
 ;; (day9-a "resources/test9a.txt")
 ;; (day9-a "resources/test9b.txt")
 ;; (day9-a "resources/test9c.txt")
-;; (day9-a "resources/input9.txt")
+;; (Day9-a "resources/input9.txt")
+
+;; puzzle 19
+
+(defn read-input-astroids [file]
+  (as-> file v
+    (slurp v)
+    (clojure.string/split v #"\n")
+    (map #(vec (seq %)) v)
+    (vec v)))
+
+(defn gcd [a b]
+  (if (= b 0) a (gcd b (mod a b))))
+
+(defn smallest-vector [[a b]]
+  (let [gcd (gcd (max (Math/abs a) (Math/abs b)) (min (Math/abs a) (Math/abs b)))]
+    [(/ a gcd) (/ b gcd)]))
+
+(defn generate-vectors [n m]
+  (->> (combo/cartesian-product (range (inc (- n)) n) (range (inc (- m)) m))
+       (filter #(not= [0 0] %))
+       (map smallest-vector)
+       set
+       vec))
+
+(defn get-mat [ma [i j]]
+  (get (get ma j) i))
+
+(defn mat-size [ma]
+  [(count (first ma)) (count ma)])
+
+(defn next-coordinates [i j n m]
+  (if (= (inc i) n)
+    [0 (inc j)]
+    [(inc i) j]))
+
+(defn add-vectors [[i j] [x y]]
+  [(+ i x) (+ j y)])
+
+(defn check-bounds [[i j] n m]
+  (and (<= 0 i) (<= 0 j) (< i n) (< j m)))
+
+(defn find-astroid [input [i j] [x y]]
+  (let [[n m] (mat-size input)]
+    (loop [i (+ i x)
+           j (+ j y)]
+      (cond (not (check-bounds [i j] n m)) 0 
+            (= (get-mat input [i j]) \#) 1
+            :else (recur (+ i x) (+ j y))))))
+
+(defn day10-a [input]
+  (let [[n m] (mat-size input)
+        vectors (generate-vectors n m)]
+    (loop [i 0 j 0 best -1 pos [-1 -1]]
+      (if (= j m) [best pos]
+        (let [[nexti nextj] (next-coordinates i j n m)]
+          (if (= (get-mat input [i j]) \.)
+            (recur nexti nextj best pos)
+            (let [res (->> (for [v vectors]
+                             (find-astroid input [i j] v))
+                           (apply +))
+                  pos (if (< best res) [i j] pos)
+                  best (if (< best res) res best)]
+              (recur nexti nextj best pos))))))))
+
+;; (read-input-astroids "resources/test10a.txt")
+(def coordinates
+  (second (day10-a (read-input-astroids "resources/input10.txt"))))
+
+;; puzzle 20
+(defn cross-product [[i j] [x y]]
+  (- (* i y) (* x j)))
+
+(defn less [[x1 y1] [x2 y2]]
+  (cond (and (>= x1 0) (< x2 0)) true
+        (and (< x1 0) (>= x2 0)) false
+        (and (= x1 0) (= x2 0) (or (>= y1 0) (>= y2 0))) (> y1 y2)
+        (and (= x1 0) (= x2 0)) (> y2 y1)
+        :else (let [det (cross-product [x1 y1] [x2 y2])]
+                (cond (< det 0) true
+                      (< 0 det) false
+                      :else (throw (Exception. "Should not happen!!!"))))))
+
+(defn find-astroid2 [input [i j] [x y]]
+  (let [[n m] (mat-size input)]
+    (loop [i (+ i x)
+           j (+ j y)]
+      (cond (not (check-bounds [i j] n m)) nil 
+            (= (get-mat input [i j]) \#) [i j] 
+            :else (recur (+ i x) (+ j y))))))
+
+(defn update-mat [ma [i j] val]
+  (assoc ma j (assoc (get ma j) i val)))
+
+(defn day10-b [input coordinates target]
+  (let [[n m] (mat-size input)
+        vectors (->> (generate-vectors n m)
+                     (sort less)
+                     (map #(vector (first %) (- (second %))))
+                     vec)
+        nv (count vectors)]
+    (loop [in input i 0 cur 0]
+      (let [v (get vectors i)
+            res (do
+                  (find-astroid2 in coordinates v) )]
+        (cond (nil? res) (recur in (mod (inc i) nv) cur)
+              (= (inc cur) target) res
+              :else (recur (update-mat in res \.) (mod (inc i) nv) (inc cur)))))))
+
+
+;; (find-astroid2 (read-input-astroids "resources/input10.txt") [30 34] [0 1])
+;; (find-astroid2 (read-input-astroids "resources/test10b.txt") [11 13] [0 -1])
+;; (day10-b (read-input-astroids "resources/input10.txt") coordinates 200)
