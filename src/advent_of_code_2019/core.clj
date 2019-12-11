@@ -736,3 +736,93 @@
 ;; (find-astroid2 (read-input-astroids "resources/input10.txt") [30 34] [0 1])
 ;; (find-astroid2 (read-input-astroids "resources/test10b.txt") [11 13] [0 -1])
 ;; (day10-b (read-input-astroids "resources/input10.txt") coordinates 200)
+
+;;puzzle 21
+
+(def vectors [[1 0] [0 1] [-1 0] [0 -1]])
+
+(defn get-correct-vec [])
+
+(defn run-program7
+  [start-res input] 
+  (loop [input input i 0 r 0 cor [0 0] veccnt 0 outcnt 0 res start-res]
+    (match (int-to-array (get input i))
+           [m3 m2 m1 1] (recur (assoc-expand input (get input (+ i 3))
+                                          (+' (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r))
+                                          m3 r)
+                               (+ i 4) r cor veccnt outcnt res)
+           [m3 m2 m1 2] (recur (assoc-expand input (get input (+ i 3))
+                                          (*' (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r))
+                                          m3 r)
+                               (+ i 4) r cor veccnt outcnt res)
+           [_ _ m1 3] (let [in (get res cor)
+                            in (if (nil? in) 0 in)]
+                        (recur (assoc-expand input (get input (inc i)) in
+                                             m1 r)
+                               (+ i 2) r cor veccnt outcnt res))
+           [_ _ m1 4] (let [out (get-program-value2 input m1 (inc i) r)]
+                        (match [(mod outcnt 2) out]
+                               [0 _] (recur input (+ i 2) r cor veccnt (inc outcnt) (assoc res cor out))
+                               [1 _] (let [new-veccnt (mod (if (= out 0) (dec veccnt) (inc veccnt)) 4)]
+                                       (recur input (+ i 2) r
+                                              (add-vectors cor (get vectors new-veccnt))
+                                              new-veccnt (inc outcnt) res))))
+           [_ m2 m1 5] (if (= (get-program-value2 input m1 (inc i) r) 0)
+                         (recur input (+ i 3) r cor veccnt outcnt res)
+                         (recur input (get-program-value2 input m2 (+ i 2) r) r cor veccnt outcnt res))
+           [_ m2 m1 6] (if (= (get-program-value2 input m1 (inc i) r) 0)
+                         (recur input (get-program-value2 input m2 (+ i 2) r) r cor veccnt outcnt res)
+                         (recur input (+ i 3) r cor veccnt outcnt res))
+           [m3 m2 m1 7] (->
+                         (assoc-expand input (get input (+ i 3))
+                                       (if (< (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r)) 1 0)
+                                       m3 r)
+                         (recur (+ i 4) r cor veccnt outcnt res))
+           [m3 m2 m1 8] (recur (assoc-expand input (get input (+ i 3))
+                                       (if (= (get-program-value2 input m1 (inc i) r)
+                                              (get-program-value2 input m2 (+ i 2) r)) 1 0)
+                                       m3 r)
+                               (+ i 4) r cor veccnt outcnt res)
+           [_ _ m1 9]  (recur input (+ i 2) (+ r (get-program-value2 input m1 (inc i) r))
+                              cor veccnt outcnt res)
+           [_ _ _ 99] res 
+           :else (throw (Exception. "Should not happen!!!")))))
+
+(defn day11-a [input]
+  (->> input
+       read-input2
+       vec
+       (run-program7 {})))
+
+;; (count (day11-a "resources/input11.txt"))
+
+;; puzzle 22
+
+(defn paint-spaceship [m]
+  (let [coordinates (->> (into [] m)
+                         (map first))
+        xs (map first coordinates)
+        ys (map second coordinates)
+        xstart (apply min xs)
+        ystart (apply min ys)
+        xend (apply max xs)
+        yend (apply max ys)]
+    (doseq [x (range xend (dec xstart ) -1)
+            y (range ystart (inc yend))]
+      (case (get m [x y])
+        nil (pr ".")
+        0 (pr ".")
+        1 (pr "#"))
+      (when (= y yend) (println)))))
+
+(defn day11-a [input]
+  (->> input
+       read-input2
+       vec
+       (run-program7 {[0 0] 1})
+       paint-spaceship))
+
+;; (day11-a "resources/input11.txt")
