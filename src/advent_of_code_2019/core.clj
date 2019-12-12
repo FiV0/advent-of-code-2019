@@ -526,9 +526,17 @@
 
 ;; (day8-a (read-input7 "resources/input8.txt"))
 ;; puzzle 16
-
-(defn transpose [mat]
-  (apply map list mat))
+(defmulti transpose
+  "Switch rows with columns."
+  class)
+ 
+(defmethod transpose clojure.lang.PersistentList
+  [mtx]
+  (apply map list mtx))
+ 
+(defmethod transpose clojure.lang.PersistentVector
+  [mtx]
+  (apply mapv vector mtx))
 
 (defn print-picture [input]
   (loop [in input
@@ -826,3 +834,112 @@
        paint-spaceship))
 
 ;; (day11-a "resources/input11.txt")
+
+;; puzzle 23 + 24
+(defn read-input-day-12 [file]
+  (as-> file v
+    (slurp v)
+    (clojure.string/replace v #"<" "")
+    (clojure.string/replace v #">" "")
+    (clojure.string/split v #"\n")
+    (map #(clojure.string/split % #",") v)
+    (map #(map (fn [s] (-> (clojure.string/split s #"=") second parse-int)) %) v)
+    (map vec v)))
+
+(defn add-vectors-3d [[x1 y1 z1] [x2 y2 z2]]
+  [(+ x1 x2) (+ y1 y2) (+ z1 z2)])
+
+(defn negate-3d-vecotr [[x y z]]
+  [(- x) (- y) (- z)])
+
+(defn velocity-change [a b]
+  (cond (< a b) 1
+        (> a b) -1
+        :else 0))
+
+(defn moons-update-velocity [[[x1 y1 z1] v1] [[x2 y2 z2] v2]]
+  (let [velo-change [(velocity-change x1 x2)
+                     (velocity-change y1 y2)
+                     (velocity-change z1 z2)]
+        velo1 (add-vectors-3d v1 velo-change)
+        velo2 (add-vectors-3d v2 (negate-3d-vecotr velo-change))]
+    [[[x1 y1 z1] velo1] [[x2 y2 z2] velo2]]))
+
+;; (moons-update-velocity [[-1 0 2] [0 0 0]] [[2 -10 -7] [0 0 0]])
+
+(defn apply-velocity [[coordinates velocity]]
+  [(add-vectors-3d coordinates velocity) velocity])
+
+(defn moons-simulation [moons]
+  (let [moon-map (apply hash-map (interleave (range) moons))
+        combis (combo/combinations (range 4) 2)]
+    (->> (reduce (fn [mm [i j]]
+                   (let [[m1 m2] (moons-update-velocity (get mm i) (get mm j))]
+                     (-> (assoc mm i m1)
+                         (assoc j m2)))) moon-map combis)
+         (map (fn [[_ m]] (apply-velocity m))))))
+
+
+(defn abs [x] (max x (- x)))
+
+(defn energy [v]
+  (->> (map abs v)
+       (apply +)))
+
+(defn total-energy [moons]
+  (->> (map #(map energy %) moons)
+       (map #(apply * %))
+       (apply +)))
+
+;; (read-input-day-12 "resources/input12.txt")
+
+(defn simulate [moons n]
+  (loop [ms moons i 0]
+    (if (= i n) ms
+        (recur (moons-simulation ms) (inc i)))))
+
+(defn day12-a [input n]
+  (-> (map #(vector % [0 0 0]) input)
+      (simulate n)
+      total-energy))
+
+;; (day12-a (read-input-day-12 "resources/input12.txt") 1000)
+;; (day12-a (read-input-day-12 "resources/test12b.txt") 100)
+;; (day12-a (read-input-day-12 "resources/test12.txt") 10)
+
+(defn dimension-velocity-update [[x v1] [y v2]]
+  [[x (+ v1 (velocity-change x y))] [y (+ v2 (velocity-change y x))]])
+
+(defn dimension-apply-velocity [[x v]]
+  [(+ x v) v])
+
+(defn simulate-one-dimension [moons]
+  (let [combis (combo/combinations (range 4) 2)]
+    (->> (reduce (fn [mm [i j]]
+                   (let [[m1 m2] (dimension-velocity-update (get mm i) (get mm j))]
+                     (-> (assoc mm i m1)
+                         (assoc j m2)))) moons combis)
+         (mapv (fn [m] (dimension-apply-velocity m))))))
+
+(defn simulate2 [dimension]
+  (loop [d dimension i 0 m {}]
+    (if (contains? m d)
+      [(get m d) i]
+      (recur (simulate-one-dimension d) (inc i) (assoc m d i)))))
+
+(defn transform-to-single-dimensions [input]
+  (transpose (mapv #(apply mapv vector %) input)))
+
+(defn lcm [a b]
+  (-> (*' a b)
+      (/ (gcd a b))))
+
+(defn day12-b [input]
+  (->> (mapv #(vector % [0 0 0]) input)
+       transform-to-single-dimensions
+       (map simulate2)
+       (map second)
+       (reduce lcm)))
+
+;; (day12-b (read-input-day-12 "resources/test12b.txt"))
+;; (day12-b (read-input-day-12 "resources/input12.txt"))
