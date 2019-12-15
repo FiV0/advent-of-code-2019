@@ -8,4 +8,5 @@
                  [org.clojure/math.combinatorics "0.1.6"]]
   :main ^:skip-aot advent-of-code-2019.core
   :target-path "target/%s"
+  :jvm-opts ["-Xmx4G"] 
   :profiles {:uberjar {:aot :all}})
