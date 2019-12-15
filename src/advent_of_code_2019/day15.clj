@@ -39,7 +39,7 @@
                 front
                 (conj front [(assoc-expand input (get input (inc i)) j m1 r)
                              (+ i 2) r next]))))
-          [] (range 1 5)))
+          [] (range 2 5)))
 
 (defn concat-vec [& vs]
   (vec (apply concat vs)))
@@ -103,4 +103,4 @@
        vec
        run-program))
 
-;; (day15-a "resources/input15.txt")
+(day15-a "resources/input15.txt")
