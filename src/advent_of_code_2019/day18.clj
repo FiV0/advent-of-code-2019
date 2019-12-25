@@ -78,7 +78,6 @@
 (defn bit-subset [i j]
   (reduce #(and %1 (<= (bit-get i %2) (bit-get j %2))) true (range *nb-keys*)))
 
-
 (def collect-all-keys
   (memoize (fn [i collected]
              (if (= collected (dec (bit-shift-left 1 *nb-keys*)))
@@ -88,8 +87,7 @@
                        (or (= i j) (= (bit-get collected j) 1))
                        (recur (inc j) res)
                        :else (let [[dis doorset] (get *graph* [i j])]
-                               #break
-                               (if (subset doorset collected)
+                               (if (bit-subset doorset collected)
                                  (recur (inc j)
                                         (min res
                                              (+ dis (collect-all-keys j (bit-set collected j)))))
@@ -109,3 +107,78 @@
 ;; (day18-a "resources/test18c.txt")
 ;; (day18-a "resources/test18d.txt")
 ;; (day18-a "resources/test18e.txt")
+
+(defn calculate-path2 [start end m]
+  (loop [seen #{}
+         queue (conj clojure.lang.PersistentQueue/EMPTY [start 0 '()])]
+    (let [[pos dis doorset] (peek queue)]
+      (cond (empty? queue) nil
+            (= pos end) [dis doorset]
+            :else (let [[newqueue newseen]
+                        (reduce (fn [[q seen] dir]
+                                  (let [npos (add-vectors pos dir)
+                                        c (get m npos)]
+                                    (cond (or (nil? c) (contains? seen npos) (= c \#)) [q seen] 
+                                          (Character/isUpperCase c)
+                                          [(conj q [npos (inc dis) (cons c doorset)]) (conj seen npos)]
+                                          :else [(conj q [npos (inc dis) doorset])
+                                                 (conj seen npos)])))
+                                [(pop queue) seen] nhood)]
+                    (recur newseen newqueue))))))
+
+(defn calculate-graph [m positions]
+  (let [n (count positions)]
+    (->> (for [i (range n) j (range n) :when (< i j)]
+           [i j])
+         (reduce (fn [graph [i j]]
+                   (let [pos1 (nth positions i)
+                         pos2 (nth positions j)
+                         [dis doorset] (calculate-path2 pos1 pos2 m)]
+                     (if (nil? dis)
+                       graph
+                       (let [bitdoorset (doorset-to-bitset doorset)]
+                         (-> (assoc graph [i j] [dis bitdoorset])
+                             (assoc [j i] [dis bitdoorset])))))) {}))))
+
+(defn calculate-paths2 [m]
+  (let [starts (filter-by-val #(= % \@) m)
+        keys (sort #(< (int (second %1)) (int (second %2)))
+                   (filter-by-val #(Character/isLowerCase %) m))
+        nb-keys (count keys)
+        key-positions (vec (map first keys))]
+    (->> (vec starts)
+         (mapv #(conj key-positions (first %)))
+         (mapv #(calculate-graph m %))
+         (vector (inc nb-keys)))))
+
+(def ^:dynamic *graphs* nil)
+
+(def collect-all-keys2
+  (memoize (fn [robots collected]
+             (if (= collected (dec (bit-shift-left 1 *nb-keys*)))
+               0
+               (loop [j 0 i 0 res Integer/MAX_VALUE]
+                 (cond (= i 4) res
+                       (= j (dec *nb-keys*)) (recur 0 (inc i) res)
+                       (or (= (nth robots i) j) (= (bit-get collected j) 1))
+                       (recur (inc j) i res)
+                       :else (let [[dis doorset] (get (get *graphs* i) [(get robots i) j])]
+                               (if (and (not (nil? dis)) (bit-subset doorset collected))
+                                 (recur (inc j) i
+                                        (min res (+ dis (collect-all-keys2
+                                                         (assoc robots i j)
+                                                         (bit-set collected j)))))
+                                 (recur (inc j) i res)))))))))
+
+(defn day18-b [file]
+  (let [[nb-keys graphs] (->> (read-input file)
+                              calculate-paths2)]
+    (binding [*nb-keys* nb-keys
+              *graphs* graphs]
+      (collect-all-keys2 (-> (repeat 4 (dec nb-keys)) vec) (bit-set 0 (dec nb-keys))))))
+
+;; (day18-b "resources/test18-2b.txt")
+;; (day18-b "resources/test18-2c.txt")
+;; (day18-b "resources/test18-2d.txt")
+;; (day18-b "resources/test18-2e.txt")
+;; (time (day18-b "resources/input18b.txt"))
